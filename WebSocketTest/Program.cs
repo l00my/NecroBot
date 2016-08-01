@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -30,7 +31,11 @@ namespace WebSocketTest
         {
             var cts = new CancellationTokenSource();
             var socket = new ClientWebSocket();
-            string wsUri = "ws://localhost:14251";
+            string wsUri = "wss://localhost:14251";
+
+            // TODO: Investigate other security measuers, as certificate errors must be ignored in order to use the NecroBot provided certificate.
+            ServicePointManager.ServerCertificateValidationCallback += 
+                (s, cert, chain, sslPolicyErrors) => true;
 
             await socket.ConnectAsync(new Uri(wsUri), cts.Token);
             Console.WriteLine(socket.State);

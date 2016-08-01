@@ -37,12 +37,12 @@ namespace PoGo.NecroBot.CLI
                 Ip = "Any",
                 Port = port,
                 Mode = SocketMode.Tcp,
-                //Security = "tls",
-                //Certificate = new CertificateConfig
-                //{
-                //    FilePath = @"cert.pfx",
-                //    Password = "necro"
-                //}
+                Security = "tls",
+                Certificate = new CertificateConfig
+                {
+                    FilePath = @"cert.pfx",
+                    Password = "necro"
+                }
             });
 
             if (setupComplete == false)
