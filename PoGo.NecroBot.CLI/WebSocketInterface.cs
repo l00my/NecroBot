@@ -37,12 +37,12 @@ namespace PoGo.NecroBot.CLI
                 Ip = "Any",
                 Port = port,
                 Mode = SocketMode.Tcp,
-                Security = "tls",
-                Certificate = new CertificateConfig
-                {
-                    FilePath = @"cert.pfx",
-                    Password = "necro"
-                }
+                //Security = "tls",
+                //Certificate = new CertificateConfig
+                //{
+                //    FilePath = @"cert.pfx",
+                //    Password = "necro"
+                //}
             });
 
             if (setupComplete == false)
@@ -125,6 +125,8 @@ namespace PoGo.NecroBot.CLI
 
         private void HandleSession(WebSocketSession session)
         {
+            session.Send($"Connected to NecroBot@{_server.Name}");
+
             if (_lastProfile != null)
                 session.Send(Serialize(_lastProfile));
 
