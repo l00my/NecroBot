@@ -25,8 +25,8 @@ namespace PoGo.NecroBot.Logic.Tasks
 
             var pokemonId = currentFortData.LureInfo.ActivePokemonId;
 
-            if (session.LogicSettings.UsePokemonToNotCatchFilter &&
-                session.LogicSettings.PokemonsNotToCatch.Contains(pokemonId))
+            if( ( session.LogicSettings.UsePokemonSniperFilterOnly && !session.LogicSettings.PokemonToSnipe.Pokemon.Contains( pokemonId ) ) ||
+                    ( session.LogicSettings.UsePokemonToNotCatchFilter && session.LogicSettings.PokemonsNotToCatch.Contains( pokemonId ) ) )
             {
                 session.EventDispatcher.Send(new NoticeEvent
                 {
@@ -40,7 +40,7 @@ namespace PoGo.NecroBot.Logic.Tasks
 
                 if (encounter.Result == DiskEncounterResponse.Types.Result.Success)
                 {
-                    await CatchPokemonTask.Execute(session, encounter, null, currentFortData, encounterId);
+                    await CatchPokemonTask.Execute(session, cancellationToken, encounter, null, currentFortData, encounterId);
                 }
                 else if (encounter.Result == DiskEncounterResponse.Types.Result.PokemonInventoryFull)
                 {

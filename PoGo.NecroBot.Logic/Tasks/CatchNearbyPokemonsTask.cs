@@ -40,8 +40,8 @@ namespace PoGo.NecroBot.Logic.Tasks
                     return;
                 }
 
-                if (session.LogicSettings.UsePokemonToNotCatchFilter &&
-                    session.LogicSettings.PokemonsNotToCatch.Contains(pokemon.PokemonId))
+                if( ( session.LogicSettings.UsePokemonSniperFilterOnly && !session.LogicSettings.PokemonToSnipe.Pokemon.Contains( pokemon.PokemonId ) ) ||
+                    ( session.LogicSettings.UsePokemonToNotCatchFilter && session.LogicSettings.PokemonsNotToCatch.Contains( pokemon.PokemonId ) ) )
                 {
                     Logger.Write(session.Translation.GetTranslation(TranslationString.PokemonSkipped, pokemon.PokemonId));
                     continue;
@@ -56,7 +56,7 @@ namespace PoGo.NecroBot.Logic.Tasks
 
                 if (encounter.Status == EncounterResponse.Types.Status.EncounterSuccess)
                 {
-                    await CatchPokemonTask.Execute(session, encounter, pokemon);
+                    await CatchPokemonTask.Execute(session, cancellationToken, encounter, pokemon);
                 }
                 else if (encounter.Status == EncounterResponse.Types.Status.PokemonInventoryFull)
                 {

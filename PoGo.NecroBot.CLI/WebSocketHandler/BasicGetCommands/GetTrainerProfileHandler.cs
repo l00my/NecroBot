@@ -9,19 +9,19 @@ using System.Threading.Tasks;
 
 namespace PoGo.NecroBot.CLI.WebSocketHandler.BasicGetCommands
 {
-    class GetItemsListHandler : IWebSocketRequestHandler
+    class GetTrainerProfileHandler : IWebSocketRequestHandler
     {
+
         public string Command { get; private set; }
 
-        public GetItemsListHandler()
+        public GetTrainerProfileHandler()
         {
-            Command = "GetItemsList";
+            Command = "GetTrainerProfile";
         }
 
         public async Task Handle(ISession session, WebSocketSession webSocketSession, dynamic message)
         {
-            await GetItemListTask.Execute(session, webSocketSession, (string)message.RequestID);
+            await GetTrainerProfileTask.Execute(session, webSocketSession, (string)message.RequestID);
         }
-
     }
 }
