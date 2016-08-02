@@ -17,6 +17,7 @@ using PoGo.NecroBot.Logic.State;
 using POGOProtos.Enums;
 using POGOProtos.Inventory.Item;
 using POGOProtos.Networking.Responses;
+using System.Text.RegularExpressions;
 
 #endregion
 
@@ -178,6 +179,8 @@ namespace PoGo.NecroBot.Logic.Tasks
                                 PokemonId = PokemonId.Missingno
                             });
 
+                            LoadSnipeLocations(session, location);
+
                             var scanResult = SnipeScanForPokemon(session, location);
 
                             List<PokemonLocation> locationsToSnipe = new List<PokemonLocation>();
@@ -310,44 +313,90 @@ namespace PoGo.NecroBot.Logic.Tasks
             await Task.Delay(session.LogicSettings.DelayBetweenPlayerActions, cancellationToken);
         }
 
-        private static ScanResult SnipeScanForPokemon(ISession session, Location location)
+        private static void LoadSnipeLocations(ISession session, Location location)
         {
-            var formatter = new NumberFormatInfo {NumberDecimalSeparator = "."};
+            var formatter = new NumberFormatInfo { NumberDecimalSeparator = "." };
 
             var offset = session.LogicSettings.SnipingScanOffset;
             // 0.003 = half a mile; maximum 0.06 is 10 miles
-            if (offset<0.001) offset=0.003;
-            if (offset>0.06) offset = 0.06;
+            if (offset < 0.001) offset = 0.003;
+            if (offset > 0.06) offset = 0.06;
 
             var boundLowerLeftLat = location.Latitude - offset;
             var boundLowerLeftLng = location.Longitude - offset;
             var boundUpperRightLat = location.Latitude + offset;
             var boundUpperRightLng = location.Longitude + offset;
 
-            var uri =
-                $"http://skiplagged.com/api/pokemon.php?bounds={boundLowerLeftLat.ToString(formatter)},{boundLowerLeftLng.ToString(formatter)},{boundUpperRightLat.ToString(formatter)},{boundUpperRightLng.ToString(formatter)}";
-            /*var uri =
-                $"http://skiplagged.com/api/pokemon.php?address={location.Latitude.ToString(formatter)},{location.Longitude.ToString(formatter)}";
-                */
-            /*
-             * http://skiplagged.com/api/pokemon.php?bounds=40.76356269219236,-73.98657795715332,40.7854671345488,-73.95812508392333
-             * bounds = bound_lower_left_lat,bound_lower_left_lng,bound_upper_right_lat,bound_upper_right_lng
-             */
+            //var uri = $"http://127.0.0.1:5000/raw_data?pokemon=true&pokestops=false&gyms=false&scanned=false&Lat={location.Latitude.ToString(formatter)}&Lng={location.Longitude.ToString(formatter)}";
+            try
+            {
+                var postUri = $"http://127.0.0.1:5000/next_loc?lat={boundLowerLeftLat.ToString(formatter)}&lon={boundLowerLeftLng.ToString(formatter)}";
+                var postRequest = WebRequest.CreateHttp(postUri);
+                postRequest.Accept = "application/json";
+                postRequest.Method = "POST";
+                postRequest.Timeout = 15000;
+                postRequest.ReadWriteTimeout = 32000;
+                var postResp = postRequest.GetResponse();
+                var postReader = new StreamReader(postResp.GetResponseStream());
+                Thread.Sleep(60000);
+            }
+            catch (Exception ex)
+            {
+                // most likely System.IO.IOException
+                session.EventDispatcher.Send(new ErrorEvent { Message = ex.ToString() });
+            }
+        }
 
+        private static ScanResult SnipeScanForPokemon(ISession session, Location location)
+        {
+            var formatter = new NumberFormatInfo { NumberDecimalSeparator = "." };
+
+            var offset = session.LogicSettings.SnipingScanOffset;
+            // 0.003 = half a mile; maximum 0.06 is 10 miles
+            if (offset < 0.001) offset = 0.003;
+            if (offset > 0.06) offset = 0.06;
+
+            var boundLowerLeftLat = location.Latitude - offset;
+            var boundLowerLeftLng = location.Longitude - offset;
+            var boundUpperRightLat = location.Latitude + offset;
+            var boundUpperRightLng = location.Longitude + offset;
+
+            //var uri = $"http://127.0.0.1:5000/raw_data?pokemon=true&pokestops=false&gyms=false&scanned=false&Lat={location.Latitude.ToString(formatter)}&Lng={location.Longitude.ToString(formatter)}";
             ScanResult scanResult;
             try
             {
+                var uri =
+                $"http://127.0.0.1:5000/raw_data?pokemon=true&pokestops=true&gyms=false&scanned=false&swLat={boundLowerLeftLat.ToString(formatter)}&swLng={boundLowerLeftLng.ToString(formatter)}&neLat={boundUpperRightLat.ToString(formatter)}&neLng={boundUpperRightLng.ToString(formatter)}";
+
+                //var uri =
+                //    $"http://skiplagged.com/api/pokemon.php?bounds={boundLowerLeftLat.ToString(formatter)},{boundLowerLeftLng.ToString(formatter)},{boundUpperRightLat.ToString(formatter)},{boundUpperRightLng.ToString(formatter)}";
+                /*var uri =
+                    $"http://skiplagged.com/api/pokemon.php?address={location.Latitude.ToString(formatter)},{location.Longitude.ToString(formatter)}";
+                    */
+                /*
+                 * http://skiplagged.com/api/pokemon.php?bounds=40.76356269219236,-73.98657795715332,40.7854671345488,-73.95812508392333
+                 * bounds = bound_lower_left_lat,bound_lower_left_lng,bound_upper_right_lat,bound_upper_right_lng
+                 */
                 var request = WebRequest.CreateHttp(uri);
                 request.Accept = "application/json";
                 request.Method = "GET";
-                request.Timeout = 5000;
+                request.Timeout = 15000;
                 request.ReadWriteTimeout = 32000;
 
                 var resp = request.GetResponse();
                 var reader = new StreamReader(resp.GetResponseStream());
                 var fullresp = reader.ReadToEnd().Replace(" M", "Male").Replace(" F", "Female").Replace("'", "");
 
-                scanResult = JsonConvert.DeserializeObject<ScanResult>(fullresp);
+                string pattern1 = @"\u2642";
+                string replacement1 = "Male";
+                string pattern2 = @"\u2640";
+                string replacement2 = "Female";
+                Regex rgx = new Regex(pattern1);
+                var fullRespFix = rgx.Replace(fullresp, replacement1);
+                rgx = new Regex(pattern2);
+                fullRespFix = rgx.Replace(fullresp, replacement2);
+
+                scanResult = JsonConvert.DeserializeObject<ScanResult>(fullRespFix);
             }
             catch (Exception ex)
             {
